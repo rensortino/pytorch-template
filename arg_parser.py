@@ -1,7 +1,7 @@
 import argparse
 
 def get_args_parser():
-    parser = argparse.ArgumentParser('Set YTID', add_help=False)
+    parser = argparse.ArgumentParser()
 
     # * Training Parameters
     parser.add_argument('--debug', action='store_true')
