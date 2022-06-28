@@ -2,7 +2,7 @@ from arg_parser import get_args_parser, setup
 from pathlib import Path
 from logzero import logger as lz_logger
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from datamodules.mnist import MNISTDataModule
+from datamodules.base import BaseDataModule
 from models.m_classifier import Classifier
 from trainers.t_classifier import Trainer
 from utils.logging import Logger
@@ -19,7 +19,7 @@ def main(args):
     eliminate_randomness(args.seed)
 
     # Data Loading
-    dm = MNISTDataModule(data_dir='data')
+    dm = BaseDataModule(data_dir='data')
     train_loader = dm.train_dataloader(args.batch_size, args.device)
     if not args.one_batch:
         val_loader = dm.val_dataloader(args.batch_size, args.device)

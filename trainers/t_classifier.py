@@ -1,11 +1,9 @@
-from pathlib import Path
 from attrdict import AttrDict
-import torch
 from tqdm import tqdm
-from logzero import logger as lz_logger
 import torch.nn.functional as F
+from trainers.t_base import BaseTrainer
 
-class Trainer:
+class ClsTrainer(BaseTrainer):
 
     def __init__(self, model, opt, logger, resume=None, scheduler=None, **kwargs):
 
@@ -18,43 +16,13 @@ class Trainer:
             batch_size: int defining the batch size
             debug: flag for debugging code 
         '''
-
+        super().__init__(logger, resume)
         self.kwargs = AttrDict(kwargs)
         self.model = model
         self.opt = opt
-        self.start_epoch = 0
-        self.logger = logger
         self.scheduler = scheduler
 
         self.criterion = F.nll_loss
-
-        if resume:
-            self.load_checkpoint(resume)
-        else:
-            self.checkpoint = {
-                'epoch': 0,
-                'loss': float('inf'),
-            }
-        self.epoch = self.start_epoch
-
-    def load_checkpoint(self, ckpt_path):
-        
-        if isinstance(ckpt_path, str):
-            ckpt_path = Path(ckpt_path)
-        self.checkpoint = torch.load(ckpt_path)
-        if 'model' in self.checkpoint:
-            self.model.load_state_dict(self.checkpoint['model'])
-        else:
-            self.model.load_state_dict(self.checkpoint)
-        
-        if 'epoch' in self.checkpoint:
-            self.start_epoch = self.checkpoint['epoch']
-
-        if 'loss' not in self.checkpoint:
-            self.checkpoint['loss'] = float('inf')
-
-    def increment_epoch(self):
-        self.epoch += 1
 
     def train_one_epoch(self, train_loader):
         epoch_loss = 0
@@ -93,23 +61,3 @@ class Trainer:
         self.opt.step()
 
         return loss.item()
-
-    def epoch_end(self, epoch_loss):
-
-        lz_logger.info(f'Epoch {self.epoch}: {epoch_loss}')
-       
-        if not (self.kwargs.debug or self.kwargs.one_batch):
-            ckpt = {
-                'epoch': self.epoch,
-                'model' : self.model.state_dict(),
-                'opt' : self.opt.state_dict(),
-            }
-            self.logger.save_ckpt(ckpt)
-
-    def save_best(self, epoch_loss, checkpoint):
-        # Save best model at min val loss
-        checkpoint['loss'] = epoch_loss
-        checkpoint['epoch'] = self.epoch
-        checkpoint['model'] = self.model.state_dict()
-        checkpoint['opt'] = self.opt.state_dict()
-        self.logger.save_ckpt(checkpoint, 'best.pt')
