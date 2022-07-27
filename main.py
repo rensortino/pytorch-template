@@ -1,4 +1,4 @@
-from arg_parser import get_args_parser, setup
+from utils.arg_parser import get_args_parser, setup
 from pathlib import Path
 from logzero import logger as lz_logger
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -7,7 +7,7 @@ from models.m_classifier import Classifier
 from trainers.t_classifier import Trainer
 from utils.logging import Logger
 import json
-from utils.misc import count_parameters, eliminate_randomness
+from utils.misc import count_parameters, fix_seed
 
 import torch
 from attrdict import AttrDict
@@ -16,7 +16,7 @@ import wandb
 
 def main(args):
 
-    eliminate_randomness(args.seed)
+    fix_seed(args.seed)
 
     # Data Loading
     dm = BaseDataModule(data_dir='data')

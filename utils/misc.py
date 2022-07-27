@@ -3,7 +3,7 @@ import random
 import numpy as np
 import torchvision
 
-def eliminate_randomness(seed=42):
+def fix_seed(seed=42):
     torch.manual_seed(seed)
     random.seed(seed)
     np.random.seed(seed)
@@ -27,5 +27,7 @@ def test_model_size(model, x):
 def visualize_image_tensor(image):
     torchvision.transforms.functional.to_pil_image(image).save('tmp.png')
 
-def count_parameters(model, trainable=True):
-    return sum(par.numel() for par in model.parameters() if par.requires_grad)
+def count_parameters(model, trainable=False):
+    if trainable:
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+    return sum(p.numel() for p in model.parameters())
