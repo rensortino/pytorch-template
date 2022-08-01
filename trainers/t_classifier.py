@@ -1,11 +1,13 @@
 from attrdict import AttrDict
 from tqdm import tqdm
 import torch.nn.functional as F
+from models.m_classifier import Classifier
 from trainers.t_base import BaseTrainer
+from torch.optim import Adam
 
 class ClsTrainer(BaseTrainer):
 
-    def __init__(self, model, opt, logger, resume=None, scheduler=None, **kwargs):
+    def __init__(self, lr, resume=None, scheduler=None, **kwargs):
 
         '''
         kwargs:
@@ -16,10 +18,10 @@ class ClsTrainer(BaseTrainer):
             batch_size: int defining the batch size
             debug: flag for debugging code 
         '''
-        super().__init__(logger, resume)
+        super().__init__(resume)
         self.kwargs = AttrDict(kwargs)
-        self.model = model
-        self.opt = opt
+        self.model = Classifier(1, 28, 28, 10).to(kwargs.device)
+        self.opt = Adam(self.model.parameters(), lr)
         self.scheduler = scheduler
 
         self.criterion = F.nll_loss

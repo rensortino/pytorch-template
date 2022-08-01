@@ -13,7 +13,7 @@ def weights_init_normal(m):
         
 class BaseTrainer:
 
-    def __init__(self, logger, resume=None):
+    def __init__(self, resume=None):
 
         '''
         kwargs:
@@ -25,13 +25,8 @@ class BaseTrainer:
             debug: flag for debugging code 
         '''
 
-        self.start_epoch = 0
-        self.logger = logger
-
         if resume:
             self.load_checkpoint(resume)
-
-        self.epoch = self.start_epoch
 
     def load_checkpoint(self, ckpt_path):
         
@@ -49,23 +44,8 @@ class BaseTrainer:
         if 'loss' not in self.checkpoint:
             self.checkpoint['loss'] = float('inf')
 
-    def increment_epoch(self):
-        self.epoch += 1
-
     def train_one_epoch(self, train_loader):
         pass
 
     def training_step(self, batch):
         pass
-
-    def epoch_end(self, epoch_loss):
-
-        lz_logger.info(f'Epoch {self.epoch}: {epoch_loss}')
-       
-        if not (self.kwargs.debug or self.kwargs.one_batch):
-            ckpt = {
-                'epoch': self.epoch,
-                'model' : self.model.state_dict(),
-                'opt' : self.opt.state_dict(),
-            }
-            self.logger.save_ckpt(ckpt)

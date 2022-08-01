@@ -1,4 +1,6 @@
 import argparse
+from attrdict import AttrDict
+import yaml
 
 def get_args_parser():
     parser = argparse.ArgumentParser()
@@ -10,6 +12,7 @@ def get_args_parser():
     parser.add_argument('--img_size', default=128, type=int)
     parser.add_argument('--epochs', default=300, type=int)
     parser.add_argument('--resume', default='', help='resume from checkpoint')
+    parser.add_argument('--dataset', default='mnist', help='Which kind of dataset to use')
     parser.add_argument('--inference', action='store_true', help='Run inference on pretrained model')
     parser.add_argument('--test_every_n_epochs', type=int, default=15,
                         help='Frequency to run tests')
@@ -50,3 +53,7 @@ def setup(args):
 
     if not args.run_name:
         args.run_name = input('Name your run: ')
+
+        
+    with open(f'config/{args.dataset}.yml') as config:
+        args.data = AttrDict(yaml.safe_load(config))

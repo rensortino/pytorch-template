@@ -1,3 +1,4 @@
+from evaluators.e_classifier import ClsEvaluator
 from utils.arg_parser import get_args_parser, setup
 from pathlib import Path
 from logzero import logger as lz_logger
@@ -27,27 +28,24 @@ def main(args):
     else:
         lz_logger.warning('Training on a single batch')
 
-    model = Classifier(1, 28, 28, 10).to(args.device)
-    opt = torch.optim.Adam(model.parameters(), args.lr)
-    if args.lr_scheduler == 'plateau':
-        scheduler = ReduceLROnPlateau(opt, patience=50)
-    elif args.lr_scheduler == 'none':
-        scheduler = None
 
     logger = Logger(args.output_dir, args.run_name)
 
     trainer_kwargs = {
         'one_batch': args.one_batch,
-        'log_every_n_epochs': args.log_every_n_epochs,
-        'batch_size': args.batch_size,
-        'debug': args.debug
     }
-    trainer = Trainer(model, opt, logger, args.resume, scheduler, **trainer_kwargs)
+    trainer = Trainer(args.resume, scheduler, **trainer_kwargs)
+    evaluator = ClsEvaluator()
+    if args.lr_scheduler == 'plateau':
+        scheduler = ReduceLROnPlateau(trainer.opt, patience=50)
+    elif args.lr_scheduler == 'none':
+        scheduler = None
 
     print('*'*70)
     lz_logger.info(f'Logging general information')
     lz_logger.info(f'Debugging mode: {args.debug}')
-    lz_logger.info(f'Model total parameters {(count_parameters(model) / 1e6):.2f}M')
+    lz_logger.info(f'Model total parameters {(count_parameters(trainer.model) / 1e6):.2f}M')
+    lz_logger.info(f'Model trainable parameters {(count_parameters(trainer.model, trainable=True) / 1e6):.2f}M')
     print('*'*70)
             
     try:
@@ -55,27 +53,44 @@ def main(args):
             assert args.resume, 'No weights selected for inference'
             epoch = args.start_epoch
             # TODO Replace with evaluator
-            loss = trainer.test_one_epoch(test_loader)
+            loss = evaluator.test_one_epoch(test_loader)
             lz_logger.info(f'Inference loss: {loss}')
             return
 
         # Training loop
         for epoch in range(trainer.start_epoch, args.epochs):
-            trainer.train_one_epoch(train_loader)
+            lz_logger.info(f'Training [{epoch} / {args.epochs}]')
+            train_loss = trainer.train_one_epoch(train_loader)
             if (epoch + 1) % 10 == 0:
-                logger.save_ckpt(model.state_dict())
-
+                logger.save_ckpt(trainer.model.state_dict())
+            logger.log_metric('train/loss', train_loss, epoch)
+            lz_logger.info(f'Epoch {epoch}: {train_loss}')
+            
+            if not (args.debug or args.one_batch):
+                ckpt = {
+                    'epoch': epoch,
+                    'gen' : trainer.model.gen.state_dict(),
+                    'disc' : trainer.model.disc.state_dict(),
+                }
+                logger.save_ckpt(ckpt)
             if args.one_batch:
-                trainer.increment_epoch()
                 continue
 
-            trainer.validate_one_epoch(val_loader)
+            lz_logger.info(f'Validation [{epoch} / {args.epochs}]')
+            val_loss = evaluator.validate_one_epoch(trainer.model, val_loader)
+            logger.log_metric(f'val/loss', val_loss, epoch)
 
-            logger.log_lr(opt, epoch)
+            if args.lr_scheduler != 'none':
+                trainer.scheduler.step(val_loss)
+
+            logger.log_lr(trainer.opt, epoch)
+
+            if (epoch + 1) % args.log_every_n_epochs == 0:
+                best_ckpt = trainer.get_best_ckpt(val_loss, epoch)
+                logger.save_ckpt(best_ckpt, 'best.pt')
 
             if (epoch + 1) % args.test_every_n_epochs == 0:
-                trainer.test_one_epoch(test_loader)
-            trainer.increment_epoch()
+                evaluator.test_one_epoch(test_loader)
 
     except KeyboardInterrupt as ki:
         print('Interrupted by user')

@@ -46,9 +46,9 @@ class Logger:
         # Give no batch size in tgt_size
         summary(model, self.out_dir / Path('summary.txt'), input_size, tgt_size, batch_size)
 
-    def log_lr(self, opt, epoch):
+    def log_lr(self, opt, epoch, title='train/lr'):
         lr = get_lr(opt)
-        wandb.log({'train/lr': lr, "epoch": epoch})
+        wandb.log({title: lr, "epoch": epoch})
 
     def save_ckpt(self, ckpt, path='checkpoint.pt'):
         path = Path(path)
