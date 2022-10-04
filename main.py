@@ -52,7 +52,6 @@ def main(args):
         if args.inference:
             assert args.resume, 'No weights selected for inference'
             epoch = args.start_epoch
-            # TODO Replace with evaluator
             loss = evaluator.test_one_epoch(test_loader)
             lz_logger.info(f'Inference loss: {loss}')
             return
