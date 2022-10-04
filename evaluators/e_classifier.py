@@ -1,9 +1,8 @@
-from evaluators.e_base import BaseEvaluator
 import torch
 from tqdm import tqdm
 from torchmetrics.functional import accuracy
 
-class ClsEvaluator(BaseEvaluator):
+class ClsEvaluator:
 
     def __init__(self):
         pass

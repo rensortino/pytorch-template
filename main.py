@@ -11,13 +11,12 @@ import json
 from utils.misc import count_parameters, fix_seed
 
 import torch
-from attrdict import AttrDict
-
 import wandb
 
 def main(args):
 
     fix_seed(args.seed)
+    config = OmegaConf.load(args.config)
 
     # Data Loading
     dm = BaseDataModule(data_dir='data')
@@ -31,15 +30,16 @@ def main(args):
 
     logger = Logger(args.output_dir, args.run_name)
 
-    trainer_kwargs = {
-        'one_batch': args.one_batch,
-    }
-    trainer = Trainer(args.resume, scheduler, **trainer_kwargs)
-    evaluator = ClsEvaluator()
-    if args.lr_scheduler == 'plateau':
-        scheduler = ReduceLROnPlateau(trainer.opt, patience=50)
-    elif args.lr_scheduler == 'none':
-        scheduler = None
+    trainer_config = config.trainer
+    trainer_config['one_batch'] = args.one_batch
+    trainer = instantiate_from_config(trainer_config)
+    evaluator = instantiate_from_config(config.evaluator)
+
+    # TODO Replace with instantiate from config
+    # if args.lr_scheduler == 'plateau':
+    #     scheduler = ReduceLROnPlateau(trainer.opt, patience=50)
+    # elif args.lr_scheduler == 'none':
+    #     scheduler = None
 
     print('*'*70)
     lz_logger.info(f'Logging general information')
@@ -65,6 +65,12 @@ def main(args):
             logger.log_metric('train/loss', train_loss, epoch)
             lz_logger.info(f'Epoch {epoch}: {train_loss}')
             
+            if args.log_weights:
+                writer.weight_histogram_adder(trainer.model.named_parameters(), epoch)
+
+            if args.log_gradients:
+                writer.gradient_histogram_adder(trainer.model.named_parameters(), epoch)
+
             if not (args.debug or args.one_batch):
                 ckpt = {
                     'epoch': epoch,
@@ -81,17 +87,16 @@ def main(args):
 
             if args.lr_scheduler != 'none':
                 trainer.scheduler.step(val_loss)
-
             logger.log_lr(trainer.opt, epoch)
 
             if (epoch + 1) % args.log_every_n_epochs == 0:
-                best_ckpt = trainer.get_best_ckpt(val_loss, epoch)
-                logger.save_ckpt(best_ckpt, 'best.pt')
+                trainer.update_best_ckpt(val_loss, epoch)
+                logger.save_ckpt(trainer.best_ckpt, 'best.pt')
 
             if (epoch + 1) % args.test_every_n_epochs == 0:
                 evaluator.test_one_epoch(test_loader)
 
-    except KeyboardInterrupt as ki:
+    except KeyboardInterrupt:
         print('Interrupted by user')
         wandb.finish()
         return

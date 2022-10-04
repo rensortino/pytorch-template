@@ -2,6 +2,7 @@ from pathlib import Path
 import torch
 from logzero import logger as lz_logger
 from torch import nn
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 def weights_init_normal(m):
     classname = m.__class__.__name__
@@ -13,7 +14,7 @@ def weights_init_normal(m):
         
 class BaseTrainer:
 
-    def __init__(self, resume=None):
+    def __init__(self, resume, scheduler=None, device='cpu'):
 
         '''
         kwargs:
@@ -25,27 +26,45 @@ class BaseTrainer:
             debug: flag for debugging code 
         '''
 
+        self.device = device
+        self.get_scheduler(scheduler)
+        self.init_checkpoint(resume)
+        self.start_epoch = 0
+
+
+    def init_checkpoint(self, resume):
         if resume:
             self.load_checkpoint(resume)
 
-    def load_checkpoint(self, ckpt_path):
-        
-        if isinstance(ckpt_path, str):
-            ckpt_path = Path(ckpt_path)
-        self.checkpoint = torch.load(ckpt_path)
-        if 'model' in self.checkpoint:
-            self.model.load_state_dict(self.checkpoint['model'])
-        else:
-            self.model.load_state_dict(self.checkpoint)
-        
-        if 'epoch' in self.checkpoint:
-            self.start_epoch = self.checkpoint['epoch']
+        self.best_ckpt = {
+                'epoch': 0,
+                'loss': float('inf'),
+            }
 
-        if 'loss' not in self.checkpoint:
-            self.checkpoint['loss'] = float('inf')
+    def load_checkpoint(self, ckpt_path):
+        checkpoint = torch.load(ckpt_path)
+        if 'model' in checkpoint:
+            self.model.load_state_dict(checkpoint['model'], strict=False)
+            self.start_epoch = checkpoint['epoch']
+        else:
+            self.model.load_state_dict(checkpoint)
+
+    def set_scheduler(self, scheduler):
+        if not scheduler:
+            self.scheduler = None
+        if scheduler == 'plateau':
+            self.scheduler = ReduceLROnPlateau(self.opt, patience=50)
 
     def train_one_epoch(self, train_loader):
         pass
 
     def training_step(self, batch):
         pass
+
+    def update_best_ckpt(self, epoch_loss, epoch):
+        if epoch_loss < self.best_ckpt['loss']:
+            # Save best model at min val loss
+            self.best_ckpt['loss'] = epoch_loss
+            self.best_ckpt['epoch'] = epoch
+            self.best_ckpt['model'] = self.model.state_dict()
+            self.best_ckpt['opt'] = self.opt.state_dict()

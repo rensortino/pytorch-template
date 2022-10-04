@@ -1,4 +1,3 @@
-from attrdict import AttrDict
 from tqdm import tqdm
 import torch.nn.functional as F
 from models.m_classifier import Classifier
@@ -19,36 +18,21 @@ class ClsTrainer(BaseTrainer):
             debug: flag for debugging code 
         '''
         super().__init__(resume)
-        self.kwargs = AttrDict(kwargs)
         self.model = Classifier(1, 28, 28, 10).to(kwargs.device)
         self.opt = Adam(self.model.parameters(), lr)
         self.scheduler = scheduler
-
         self.criterion = F.nll_loss
+        self.log_every_n_epochs = kwargs.pop('log_every_n_epochs', 15)
 
-    def train_one_epoch(self, train_loader):
+    def train_one_epoch(self, dataloader):
         epoch_loss = 0
-        with tqdm(train_loader, disable=self.kwargs.one_batch) as t:
-
-            # Setup
-            self.model.train()
-            t.set_description(f'Training Epoch {self.epoch}')
-
-            # Training loop
-            for i, batch in enumerate(t):
-                loss = self.training_step(batch)
-                epoch_loss += loss
-                if self.kwargs.one_batch:
-                    break
+        self.model.train()
+        for batch in tqdm(dataloader):
+            loss = self.training_step(batch)
+            epoch_loss += loss
         
         # Aggregating and logging metrics
-        epoch_loss /= len(train_loader)
-        self.logger.log_metric(f'train/loss', epoch_loss, self.epoch)
-            
-        # Additional logging at the end of the epoch (e.g. checkpoints)
-        if (self.epoch + 1) % self.kwargs.log_every_n_epochs == 0:
-            self.epoch_end(epoch_loss, 'train')
-
+        epoch_loss /= len(dataloader)
         return epoch_loss
 
 
@@ -63,3 +47,7 @@ class ClsTrainer(BaseTrainer):
         self.opt.step()
 
         return loss.item()
+
+    def train_one_batch(self, batch):
+        self.model.train()
+        return self.training_step(batch)
