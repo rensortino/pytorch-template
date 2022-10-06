@@ -4,6 +4,8 @@ from logzero import logger as lz_logger
 from torch import nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
+from utils.misc import instantiate_from_config
+
 def weights_init_normal(m):
     classname = m.__class__.__name__
     if classname.find("Conv") != -1:
@@ -29,7 +31,7 @@ class BaseTrainer:
         self.device = device
         self.init_checkpoint(resume)
         self.start_epoch = 0
-
+        self.scheduler = None
 
     def init_checkpoint(self, resume):
         if resume:
@@ -47,12 +49,6 @@ class BaseTrainer:
             self.start_epoch = checkpoint['epoch']
         else:
             self.model.load_state_dict(checkpoint)
-
-    def set_scheduler(self, scheduler):
-        if not scheduler:
-            self.scheduler = None
-        if scheduler == 'plateau':
-            self.scheduler = ReduceLROnPlateau(self.opt, patience=50)
 
     def train_one_epoch(self, train_loader):
         pass

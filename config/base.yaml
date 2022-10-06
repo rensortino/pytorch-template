@@ -10,6 +10,10 @@ trainer:
         height: 28
         num_classes: 10
         hidden_size: 64
+    scheduler:
+      target: torch.optim.lr_scheduler.ExponentialLR
+      params:
+        gamma: 0.9
     
 data:
   target: datamodules.mnist.MNISTDataModule

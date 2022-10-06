@@ -1,5 +1,4 @@
 from utils.arg_parser import get_args_parser, setup
-from datamodules.base import BaseDataModule
 from utils.logging import Logger
 from utils.misc import count_parameters, fix_seed, instantiate_from_config
 import wandb
@@ -31,12 +30,6 @@ def main(args):
     trainer_config['one_batch'] = args.one_batch
     trainer = instantiate_from_config(trainer_config)
     evaluator = instantiate_from_config(config.evaluator)
-
-    # TODO Replace with instantiate from config
-    # if args.lr_scheduler == 'plateau':
-    #     scheduler = ReduceLROnPlateau(trainer.opt, patience=50)
-    # elif args.lr_scheduler == 'none':
-    #     scheduler = None
 
     print('*'*70)
     logger.info(f'Logging general information')

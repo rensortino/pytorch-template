@@ -4,9 +4,11 @@ from models.m_classifier import Classifier
 from trainers.t_base import BaseTrainer
 from torch.optim import Adam
 
+from utils.misc import instantiate_from_config
+
 class ClsTrainer(BaseTrainer):
 
-    def __init__(self, lr, resume=None, scheduler=None, **kwargs):
+    def __init__(self, lr, resume=None, **kwargs):
 
         '''
         kwargs:
@@ -19,11 +21,14 @@ class ClsTrainer(BaseTrainer):
         '''
         super().__init__(resume)
         device = kwargs.pop('device', 'cuda')
-        self.model = Classifier(1, 28, 28, 10).to(device)
+        # self.model = Classifier(1, 28, 28, 10).to(device)
+        model = kwargs.pop('model', None)
+        scheduler = kwargs.pop('scheduler', None)
+        self.model = instantiate_from_config(model).to(device)
         self.opt = Adam(self.model.parameters(), lr)
-        self.scheduler = scheduler
         self.criterion = F.nll_loss
         self.log_every_n_epochs = kwargs.pop('log_every_n_epochs', 15)
+        self.scheduler = instantiate_from_config({'target': scheduler['target'], 'params': {'optimizer': self.opt, 'gamma': scheduler['params']['gamma']}}) if scheduler else None
 
     def train_one_epoch(self, dataloader):
         epoch_loss = 0
