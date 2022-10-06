@@ -18,7 +18,8 @@ class ClsTrainer(BaseTrainer):
             debug: flag for debugging code 
         '''
         super().__init__(resume)
-        self.model = Classifier(1, 28, 28, 10).to(kwargs.device)
+        device = kwargs.pop('device', 'cuda')
+        self.model = Classifier(1, 28, 28, 10).to(device)
         self.opt = Adam(self.model.parameters(), lr)
         self.scheduler = scheduler
         self.criterion = F.nll_loss

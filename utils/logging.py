@@ -14,7 +14,7 @@ class Logger:
         self.out_dir = Path(output_dir)
         self.run_name = Path(run_name)
         self._set_dirs()
-        self.run = wandb_run
+        self.wandb_run = wandb_run
 
         logzero.logfile(self.out_dir / Path('output.log'))
         wandb.login()      
@@ -66,7 +66,7 @@ class Logger:
         if on_wandb and self.wandb_run:
             model = wandb.Artifact('model', type='model')
             model.add_file(self.out_dir / path)
-            self.run.log_artifact(model)
+            self.wandb_run.log_artifact(model)
 
 
 def get_lr(optimizer):

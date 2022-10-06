@@ -14,7 +14,7 @@ def weights_init_normal(m):
         
 class BaseTrainer:
 
-    def __init__(self, resume, scheduler=None, device='cpu'):
+    def __init__(self, resume, device='cpu'):
 
         '''
         kwargs:
@@ -27,7 +27,6 @@ class BaseTrainer:
         '''
 
         self.device = device
-        self.get_scheduler(scheduler)
         self.init_checkpoint(resume)
         self.start_epoch = 0
 

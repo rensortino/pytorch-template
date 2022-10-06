@@ -1,0 +1,20 @@
+trainer:
+  target: trainers.t_classifier.ClsTrainer
+  params:
+    lr: 0.0001
+    model:
+      target: models.m_classifier.Classifier
+      params:
+        channels: 1
+        width: 28
+        height: 28
+        num_classes: 10
+        hidden_size: 64
+    
+data:
+  target: datamodules.mnist.MNISTDataModule
+  params:
+    data_dir: data
+
+evaluator:
+  target: evaluators.e_classifier.ClsEvaluator

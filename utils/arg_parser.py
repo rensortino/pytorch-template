@@ -35,6 +35,10 @@ def get_args_parser():
                         help='descriptive name of run')
     parser.add_argument('--log_every_n_epochs', type=int, default=5,
                         help='Frequency to log gradients and images')
+    parser.add_argument('--log_gradients', action='store_true',
+                        help='Whether to log gradients or not')
+    parser.add_argument('--log_weights', action='store_true',
+                        help='Whether to log weights or not')
     
     # * Other parameters
     parser.add_argument('--device', default='cuda:0',

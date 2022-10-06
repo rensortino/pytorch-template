@@ -1,22 +1,14 @@
-from evaluators.e_classifier import ClsEvaluator
 from utils.arg_parser import get_args_parser, setup
-from pathlib import Path
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from datamodules.base import BaseDataModule
-from models.m_classifier import Classifier
-from trainers.t_classifier import Trainer
 from utils.logging import Logger
-import json
 from utils.misc import count_parameters, fix_seed, instantiate_from_config
-from omegaconf import OmegaConf
-
-import torch
 import wandb
-
+from omegaconf import OmegaConf
+from pathlib import Path
 def main(args):
 
     fix_seed(args.seed)
-    config = OmegaConf.load(args.config)
+    config = OmegaConf.load((Path('config') / args.config).with_suffix('.yaml'))
 
     run = wandb.init(
         mode="disabled" if args.debug else "online",
@@ -25,7 +17,7 @@ def main(args):
     )
 
     # Data Loading
-    dm = BaseDataModule(data_dir='data')
+    dm = instantiate_from_config(config.data)
     train_loader = dm.train_dataloader(args.batch_size, args.device)
     if not args.one_batch:
         val_loader = dm.val_dataloader(args.batch_size, args.device)
@@ -33,8 +25,7 @@ def main(args):
     else:
         logger.warning('Training on a single batch')
 
-
-    logger = Logger(run, args.output_dir, args.run_name)
+    logger = Logger(args.output_dir, args.run_name, run)
 
     trainer_config = config.trainer
     trainer_config['one_batch'] = args.one_batch
@@ -100,7 +91,7 @@ def main(args):
                 logger.save_ckpt(trainer.best_ckpt, 'best.pt')
 
             if (epoch + 1) % args.test_every_n_epochs == 0:
-                evaluator.test_one_epoch(test_loader)
+                evaluator.test_one_epoch(trainer.model, test_loader)
 
     except KeyboardInterrupt:
         print('Interrupted by user')
@@ -111,13 +102,5 @@ def main(args):
 if __name__ == '__main__':
 
     args = get_args_parser().parse_args()
-
-    run_mode = 'disabled' if args.debug else 'online'  
-    wandb.init(
-            config=args,
-            name=args.run_name,
-            mode=run_mode
-        )
-    
     setup(args)
     main(args)
