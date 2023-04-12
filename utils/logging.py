@@ -1,24 +1,28 @@
 from datetime import datetime
 from pathlib import Path
-from torchsummary.torchsummary import summary
+# from torchsummary.torchsummary import summary
 import sys
 import torch
 import wandb
 from logzero import logger as lz_logger
 import logzero
 
+
+# TODO Remove wandb_run and artifacts 
 class Logger:
 
-    def __init__(self, output_dir, run_name, wandb_run=None):
+    def __init__(self, output_dir, run_name, on_wandb):
         
         self.out_dir = Path(output_dir)
         self.run_name = Path(run_name)
+        self.on_wandb = on_wandb
         self._set_dirs()
-        self.wandb_run = wandb_run
 
         logzero.logfile(self.out_dir / Path('output.log'))
-        wandb.login()      
-
+        if on_wandb:
+            wandb.login()
+            wandb.init(name=run_name)
+        
         self._log_command()
 
     def _set_dirs(self):
@@ -34,23 +38,19 @@ class Logger:
             out.write(cmd_args)
             out.write('\n')
 
-    def log_image(self, pil_img, phase, title, step, on_wandb=True):
+    def log_image(self, pil_img, phase, title, step):
         pil_img.save(self.out_dir / Path(f'{title}.png'))
-        if on_wandb and self.wandb_run:
+        if self.on_wandb:
             wandb.log({f'{phase}/{title}': wandb.Image(pil_img), 'epoch':step})
 
-    def log_metric(self, title, metric, step, on_wandb=True):
+    def log_metric(self, title, metric, step):
         lz_logger.info(f'Epoch [{step}] - {title}: {metric}')
-        if on_wandb and self.wandb_run:
+        if self.on_wandb:
             wandb.log({title: metric, 'epoch': step})
 
-    def log_summary(self, model, input_size=(4,), tgt_size=(4,260), batch_size=32):
-        # Give no batch size in tgt_size
-        summary(model, self.out_dir / Path('summary.txt'), input_size, tgt_size, batch_size)
-
-    def log_lr(self, opt, epoch, title='train/lr', on_wandb=True):
+    def log_lr(self, opt, epoch, title='train/lr'):
         lr = get_lr(opt)
-        if on_wandb and self.wandb_run:
+        if self.on_wandb:
             wandb.log({title: lr, "epoch": epoch})
 
     def warning(self, text):
@@ -59,14 +59,12 @@ class Logger:
     def info(self, text):
         lz_logger.info(text)
 
-    def save_ckpt(self, ckpt, path='checkpoint.pt', on_wandb=True):
+    def save_ckpt(self, ckpt, path='checkpoint.pt'):
         path = Path(path)
         lz_logger.info(f'Saving {path} in {self.out_dir}')
         torch.save(ckpt, self.out_dir / path)
-        if on_wandb and self.wandb_run:
-            model = wandb.Artifact('model', type='model')
-            model.add_file(self.out_dir / path)
-            self.wandb_run.log_artifact(model)
+        if self.on_wandb:
+            wandb.save(str(self.out_dir / path))
 
 
 def get_lr(optimizer):

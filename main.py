@@ -79,7 +79,7 @@ def main(args):
                 trainer.scheduler.step(val_loss)
             logger.log_lr(trainer.opt, epoch)
 
-            if (epoch + 1) % args.log_every_n_epochs == 0:
+            if (epoch + 1) % args.log_freq == 0:
                 trainer.update_best_ckpt(val_loss, epoch)
                 logger.save_ckpt(trainer.best_ckpt, 'best.pt')
 

@@ -12,10 +12,7 @@ class ClsTrainer(BaseTrainer):
 
         '''
         kwargs:
-            one_batch: trains the model on just one batch, for debugging purposes
-            log_every_n_epochs: logging frequency
-            log_weights: bool that sets whether to log weights as histograms
-            log_gradients: bool that sets whether to log gradients as histograms
+            log_freq: logging frequency
             batch_size: int defining the batch size
             debug: flag for debugging code 
         '''
@@ -27,7 +24,7 @@ class ClsTrainer(BaseTrainer):
         self.model = instantiate_from_config(model).to(device)
         self.opt = Adam(self.model.parameters(), lr)
         self.criterion = F.nll_loss
-        self.log_every_n_epochs = kwargs.pop('log_every_n_epochs', 15)
+        self.log_freq = kwargs.pop('log_freq', 15)
         self.scheduler = instantiate_from_config({'target': scheduler['target'], 'params': {'optimizer': self.opt, 'gamma': scheduler['params']['gamma']}}) if scheduler else None
 
     def train_one_epoch(self, dataloader):

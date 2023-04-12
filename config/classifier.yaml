@@ -1,0 +1,7 @@
+target: models.m_classifier.Classifier
+params:
+  channels: 1
+  width: 28
+  height: 28
+  num_classes: 10
+  hidden_size: 64
