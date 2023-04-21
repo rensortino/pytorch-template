@@ -11,6 +11,17 @@ def fix_seed(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+def load_weights(model, ckpt, strict=False):
+    u, m = model.load_state_dict(ckpt, strict=strict)
+    model_name = str(model.__class__).split('.')[-1].split("'")[0]
+    print(f"Loading weights from for {model_name}")
+    if not (u or m):
+        print(f"All keys matched")
+    if u:
+        print(f"Missing keys: {u}")
+    if m:
+        print(f"Unexpected keys: {m}")
+    return model
 
 def get_model_output_size(model, x):
     for layer in model:
