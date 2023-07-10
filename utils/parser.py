@@ -5,8 +5,7 @@ def get_parser():
     # Dataset options
     parser.add_argument('--dataset', type=str)
     parser.add_argument('--data-dir', default='data', type=str)
-    parser.add_argument('--workers', type=int, default=-1,
-                        help='-1 for <batch size> threads, 0 for main thread, >0 for background threads')
+    parser.add_argument('--workers', type=int, default=0)
     # Training options
     parser.add_argument('--model-config')
     parser.add_argument('--batch-size', type=int, default=8)
