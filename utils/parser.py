@@ -4,9 +4,11 @@ def get_parser():
     parser = argparse.ArgumentParser()
     # Dataset options
     parser.add_argument('--dataset', type=str)
+    parser.add_argument('--data-dir', default='data', type=str)
     parser.add_argument('--workers', type=int, default=-1,
                         help='-1 for <batch size> threads, 0 for main thread, >0 for background threads')
     # Training options
+    parser.add_argument('--model-config')
     parser.add_argument('--batch-size', type=int, default=8)
     parser.add_argument('--lr', type=float, default=5e-5)
     parser.add_argument('--resume')
@@ -19,10 +21,11 @@ def get_parser():
     parser.add_argument('--wandb-entity', type=str,
                         default="rensortino")
     parser.add_argument('--wandb-project', type=str,
-                        default="ldm")
+                        default="pytorch-template")
     parser.add_argument('--log-freq', type=int, default=10)
     parser.add_argument('--save-freq', type=int, default=150)
     parser.add_argument('--debug', action='store_true')
+    parser.add_argument('--best-ckpt-metric', type=str, help="Key for metric to use to save best checkpoint")
     return parser
 
 def setup(args):
