@@ -9,11 +9,11 @@ def weights_init_normal(m):
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.constant_(m.bias.data, 0.0)
 
-def read_model_config(config_file):
-    with open(f"configs/{config_file}", 'r') as stream:
+def read_model_config(config_path):
+    with open(f"{config_path}", 'r') as stream:
         try:
-            parsed_yaml=yaml.safe_load(stream)
-            return parsed_yaml["model"] # TODO Maybe rmeove the model key and leave only the parameters
+            parsed_yaml = yaml.safe_load(stream)
+            return parsed_yaml
         except yaml.YAMLError as exc:
             raise exc
 
