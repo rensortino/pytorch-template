@@ -132,3 +132,6 @@ dmypy.json
 output
 wandb
 data
+*.png
+*.pt
+runs
