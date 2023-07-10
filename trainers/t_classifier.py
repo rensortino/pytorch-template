@@ -1,46 +1,23 @@
 from tqdm import tqdm
 import torch.nn.functional as F
-from models.m_classifier import Classifier
 from trainers.t_base import BaseTrainer
 from torch.optim import Adam
-
-from utils.misc import instantiate_from_config
+import torch
+import wandb
+from torchvision.utils import save_image
 
 class ClsTrainer(BaseTrainer):
 
-    def __init__(self, lr, resume=None, **kwargs):
-
+    def __init__(self, model, **init_kwargs):
         '''
-        kwargs:
-            log_freq: logging frequency
-            batch_size: int defining the batch size
-            debug: flag for debugging code 
+        Classifier for MNIST dataset
         '''
-        super().__init__(resume)
-        device = kwargs.pop('device', 'cuda')
-        # self.model = Classifier(1, 28, 28, 10).to(device)
-        model = kwargs.pop('model', None)
-        scheduler = kwargs.pop('scheduler', None)
-        self.model = instantiate_from_config(model).to(device)
-        self.opt = Adam(self.model.parameters(), lr)
+        super().__init__(**init_kwargs)
+        self.model = model
+        self.opt = Adam(self.model.parameters(), self.lr)
         self.criterion = F.nll_loss
-        self.log_freq = kwargs.pop('log_freq', 15)
-        self.scheduler = instantiate_from_config({'target': scheduler['target'], 'params': {'optimizer': self.opt, 'gamma': scheduler['params']['gamma']}}) if scheduler else None
 
-    def train_one_epoch(self, dataloader):
-        epoch_loss = 0
-        self.model.train()
-        for batch in tqdm(dataloader):
-            loss = self.training_step(batch)
-            epoch_loss += loss
-        
-        # Aggregating and logging metrics
-        epoch_loss /= len(dataloader)
-        return epoch_loss
-
-
-    def training_step(self, batch):
-
+    def training_step(self, batch, return_preds=False):
         x, y = batch
         logits = self.model(x)
         loss = self.criterion(logits, y)
@@ -49,8 +26,53 @@ class ClsTrainer(BaseTrainer):
         loss.backward()
         self.opt.step()
 
-        return loss.item()
+        loss_dict = {}
+        loss_dict["cross_entropy"] = loss.item()
 
-    def train_one_batch(self, batch):
-        self.model.train()
-        return self.training_step(batch)
+        if return_preds:
+            preds = logits.argmax(dim=1)
+            return loss_dict, preds
+
+        return loss_dict
+
+    def eval_one_epoch(self):
+        epoch_metrics = {}
+        self.model.eval()
+
+        for batch in tqdm(self.test_loader):
+            batch_metrics = self.eval_step(batch)
+            if epoch_metrics == {}:
+                # Initialize metrics keys
+                epoch_metrics = {k: 0 for k in batch_metrics}
+            epoch_metrics = {k: v + batch_metrics[k]
+                             for k, v in epoch_metrics.items()}
+        # Aggregating and logging metrics
+        epoch_metrics = {k: v / len(self.test_loader)
+                           for k, v in epoch_metrics.items()}
+        return epoch_metrics
+
+    def eval_step(self, batch):
+        x, y = batch
+        with torch.no_grad():
+            logits = self.model(x)
+        loss = self.criterion(logits, y)
+
+        metrics = {}
+        metrics["cross_entropy"] = loss.item()
+        preds = logits.argmax(dim=1)
+        accuracy = (preds == y).float().mean()
+        metrics['accuracy'] = accuracy.item()
+
+        return metrics
+
+    def visualize_results(self, epoch):
+        sample_batch = next(iter(self.test_loader))
+        x, y = sample_batch
+        preds = self.model(x).argmax(dim=1)
+
+        # Log images
+        wandb_images = []
+        for i in range(min(8, len(x))):
+            self.logger.save_image(x[i], f"pred_{preds[i]}_label_{y[i]}.png", epoch)
+            wandb_images.append(wandb.Image(x[i], caption=f"Pred: {preds[i]}, Label: {y[i]}"))
+        wandb.log({"sample_preds": wandb_images})
