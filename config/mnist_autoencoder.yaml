@@ -1,0 +1,4 @@
+channels: 1
+width: 28
+height: 28
+hidden_size: 256
