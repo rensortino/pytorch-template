@@ -35,22 +35,6 @@ class ClsTrainer(BaseTrainer):
 
         return loss_dict
 
-    def eval_one_epoch(self):
-        epoch_metrics = {}
-        self.model.eval()
-
-        for batch in tqdm(self.test_loader):
-            batch_metrics = self.eval_step(batch)
-            if epoch_metrics == {}:
-                # Initialize metrics keys
-                epoch_metrics = {k: 0 for k in batch_metrics}
-            epoch_metrics = {k: v + batch_metrics[k]
-                             for k, v in epoch_metrics.items()}
-        # Aggregating and logging metrics
-        epoch_metrics = {k: v / len(self.test_loader)
-                           for k, v in epoch_metrics.items()}
-        return epoch_metrics
-
     def eval_step(self, batch):
         x, y = batch
         with torch.no_grad():
