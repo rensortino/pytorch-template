@@ -1,49 +1,41 @@
-from pathlib import Path
-import torch
-from logzero import logger as lz_logger
-from torch import nn
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-
-from utils.misc import instantiate_from_config
-from utils.logger import Logger
-
-
-def weights_init_normal(m):
-    classname = m.__class__.__name__
-    if classname.find("Conv") != -1:
-        nn.init.normal_(m.weight.data, 0.0, 0.02)
-    elif classname.find("BatchNorm2d") != -1:
-        nn.init.normal_(m.weight.data, 1.0, 0.02)
-        nn.init.constant_(m.bias.data, 0.0)
-        
 class BaseTrainer:
 
-    def __init__(self, resume, device='cpu', **kwargs):
+    def __init__(self, logger, datamodule, resume=None, device='cuda',
+                 epochs=300, save_freq=100, log_freq=5, debug=False):
+        r'''
+        Basic training logic to be inherited by all trainers.
 
-        '''
-        kwargs:
-            log_freq: logging frequency
-            batch_size: int defining the batch size
-            debug: flag for debugging mode 
+        Args:
+            logger_kwargs: (utils.logging.Logger) logger instance
+            datamodule: (datamodules.base.BaseDataModule) object instance inheriting from datamodules.base.BaseDataModule
+            resume: (str) checkpoint path to resume from
+            device: (str) device to run training on
+            epochs: (int) number of epochs to train for
+            save_freq: (int) frequency at which to save intermediate checkpoints
+            log_freq: (int) frequency at which to log last checkpoints
+            debug: (bool) whether to run in debug mode
         '''
 
-        self.device = device
+        self.logger = logger
+        self.datamodule = datamodule
         self.init_checkpoint(resume)
+        self.device = device
+        self.num_epochs = epochs
         self.start_epoch = 0
-        self.num_epochs = kwargs.pop(kwargs["epochs"], 300)
         self.best_ckpt = {"loss": float("inf")}
 
-        # Setup Logger
-        out_dir = kwargs.pop("output_dir", "output")
-        run_name = kwargs.pop("run_name", "placeholder")
-        on_wandb = kwargs.pop("on_wandb", "False")
-        self.logger = Logger(out_dir, run_name, on_wandb)
+        self.log_freq = log_freq
+        self.save_freq = save_freq
+        self.debug = debug
 
     def init_checkpoint(self, resume):
         if resume:
             self.load_checkpoint(resume)
 
     def load_checkpoint(self, ckpt_path):
+        pass
+
+    def train(self, train_loader):
         pass
 
     def train_one_epoch(self, train_loader):
